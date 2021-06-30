@@ -5,6 +5,7 @@ import static org.junit.Assert.*;
 import com.google.protobuf.ByteString;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
@@ -279,6 +280,131 @@ public class RawKVClientTest {
     } catch (final TiKVException e) {
       logger.warn("Test fails with Exception: " + e);
     }
+  }
+  @Test
+  public void PutGetTest() {
+    if (!initialized) return;
+    int workerCnt = 40;
+    ExecutorService executors = Executors.newFixedThreadPool(workerCnt);
+    ExecutorCompletionService<Object> completionService =
+            new ExecutorCompletionService<>(executors);
+    int dataCnt = (int) Long.parseLong(System.getProperty("tikv.test.operation_cnt", "1000000"));
+
+    List<ByteString> valuePool = new ArrayList<>();
+    int valuePoolSize = 10000;
+    for (int i = 0; i < valuePoolSize; i++) {
+      valuePool.add(generateBatchPutValue());
+    }
+
+    String runMode = System.getProperty("tikv.test.mode", "load");
+
+    AtomicLong globalQPS = new AtomicLong(0);
+    AtomicLong globalFailQPS = new AtomicLong(0);
+    AtomicLong globalTimeoutTPS = new AtomicLong(0);
+    AtomicLong finishedTask = new AtomicLong(0);
+    if (runMode.equals("run")) {
+      logger.info("run test");
+      for (int i = 0; i < workerCnt; i++) {
+        int idx = i;
+        completionService.submit(
+                () -> {
+                  long failCount = 0;
+                  String prefix = String.format("%d%09d%09d", idx, idx, idx);
+                  RawKVClient rawKVClient = session.createRawClient();
+                  long startTime = System.currentTimeMillis();
+                  long qps = 0;
+                  for (int j = 0; j < dataCnt; j++) {
+                    long id = r.nextInt(dataCnt);
+                    ByteString key =
+                            generateBatchPutKey(
+                                    "envid10", "type11", String.format("%s%03d%04d", prefix, id, id));
+
+                    try {
+                      if (j % 5 == 0) {
+                        ByteString value = valuePool.get(r.nextInt(valuePoolSize));
+                        rawKVClient.put(key, value);
+                      } else {
+                        Optional<ByteString> value = rawKVClient.get(key);
+                      }
+                      qps += 1;
+                    } catch (Exception e) {
+                      failCount += 1;
+                    }
+                    if (j % 10 == 9) {
+                      Thread.sleep(100);
+                      long endTime = System.currentTimeMillis();
+                      if (endTime - startTime > 1000) {
+                        globalTimeoutTPS.addAndGet(1);
+                      }
+                      startTime = endTime;
+                      globalFailQPS.addAndGet(failCount);
+                      globalQPS.addAndGet(qps);
+                      failCount = 0;
+                      qps = 0;
+                    }
+                  }
+                  finishedTask.addAndGet(1);
+                  return null;
+                });
+      }
+    } else {
+      logger.info("load data");
+      for (int i = 0; i < workerCnt; i++) {
+        int idx = i;
+        completionService.submit(
+                () -> {
+                  String prefix = String.format("%d%09d%09d", idx, idx, idx);
+                  RawKVClient rawKVClient = session.createRawClient();
+                  Map<ByteString, ByteString> map = new HashMap<>();
+                  for (int j = 0; j < dataCnt; j++) {
+                    String id = String.format("%s%03d%04d", prefix, j, j);
+                    ByteString key = generateBatchPutKey("envid10", "type11", id);
+                    ByteString value = valuePool.get(r.nextInt(valuePoolSize));
+                    map.put(key, value);
+                    if (j % 100 == 99) {
+                      try {
+                        rawKVClient.batchPut(map);
+                        globalQPS.addAndGet(100);
+                      } catch (Exception e) {
+                        globalFailQPS.addAndGet(1);
+                        Thread.sleep(1000);
+                      }
+                      map.clear();
+                    }
+                  }
+                  finishedTask.addAndGet(1);
+                  return null;
+                });
+      }
+    }
+    logger.info("start");
+    try {
+      long qps = 0;
+      while (finishedTask.get() < 5) {
+        Thread.sleep(10 * 1000);
+        long curQps = globalQPS.get();
+        logger.info(
+                "Current thread QPS: "
+                        + (curQps - qps) / 10
+                        + ", failRequestCount: "
+                        + globalFailQPS.get()
+                        + ", timeoutTransactionCount: "
+                        + globalTimeoutTPS.get() / 10);
+        qps = curQps;
+      }
+      for (int i = 0; i < workerCnt; i++) {
+        completionService.take().get(1, TimeUnit.HOURS);
+      }
+
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      logger.info("Current thread interrupted. Test fail.");
+    } catch (TimeoutException e) {
+      logger.info("TimeOut Exceeded for current test. " + 1 + "s");
+    } catch (ExecutionException e) {
+      logger.info("Execution exception met. Test fail.");
+    }
+    logger.info("done");
   }
 
   private List<Kvrpcpb.KvPair> rawKeys() {
