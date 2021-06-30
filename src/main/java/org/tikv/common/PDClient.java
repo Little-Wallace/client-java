@@ -414,6 +414,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
         continue;
       }
 
+      logger.info(String.format("can not switch to new leader, try follower forward"));
       List<Pdpb.Member> members = resp.getMembersList();
 
       boolean hasReachNextMember = false;
