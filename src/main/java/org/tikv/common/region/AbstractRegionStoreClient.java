@@ -206,7 +206,7 @@ public abstract class AbstractRegionStoreClient
             return targetStore.withProxy(store.getStore());
           }
         } else {
-          if (peer.getStoreId() == targetStore.getStore().getId()) {
+          if (peer.getStoreId() == targetStore.getProxyStore().getId()) {
             hasVisitedStore = true;
           } else if (hasVisitedStore) {
             TiStore proxyStore = regionManager.getStoreById(peer.getStoreId());
