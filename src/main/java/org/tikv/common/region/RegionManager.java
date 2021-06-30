@@ -237,13 +237,14 @@ public class RegionManager {
    *
    * @param region region
    */
-  public void onRequestFail(TiRegion region) {
+  public synchronized void onRequestFail(TiRegion region) {
     onRequestFail(region, region.getLeader().getStoreId());
   }
 
   private void onRequestFail(TiRegion region, long storeId) {
-    if (this.storeChecker != null) {
-      cache.invalidateRegion(region);
+    logger.warn(String.format("invalid store [%d]", storeId));
+    cache.invalidateRegion(region);
+    if (cache.storeCache.get(storeId) != null) {
       cache.invalidateAllRegionForStore(storeId);
     }
   }
