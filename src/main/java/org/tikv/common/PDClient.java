@@ -470,7 +470,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     }
     if (pdClientWrapper == null) {
       throw new TiClientInternalException(
-              "already tried all address on file, but not leader found yet.");
+          "already tried all address on file, but not leader found yet.");
     }
   }
 

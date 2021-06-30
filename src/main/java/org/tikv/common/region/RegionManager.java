@@ -219,9 +219,9 @@ public class RegionManager {
     if (cache.updateStore(oldStore, newStore)) {
       if (newStore.isUnreachable()) {
         logger.warn(
-                String.format(
-                        "check health for store [%s] in background thread",
-                        newStore.getStore().getAddress()));
+            String.format(
+                "check health for store [%s] in background thread",
+                newStore.getStore().getAddress()));
         this.storeChecker.scheduleStoreHealthCheck(newStore);
       }
     }
