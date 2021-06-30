@@ -468,8 +468,10 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
         return;
       }
     }
-    throw new TiClientInternalException(
-        "already tried all address on file, but not leader found yet.");
+    if (pdClientWrapper == null) {
+      throw new TiClientInternalException(
+              "already tried all address on file, but not leader found yet.");
+    }
   }
 
   private synchronized void tryUpdateMembers(List<URI> members) {
