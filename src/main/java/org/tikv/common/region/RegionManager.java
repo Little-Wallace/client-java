@@ -31,7 +31,6 @@ import org.slf4j.LoggerFactory;
 import org.tikv.common.ReadOnlyPDClient;
 import org.tikv.common.TiConfiguration;
 import org.tikv.common.event.CacheInvalidateEvent;
-import org.tikv.common.exception.GrpcException;
 import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.util.BackOffer;
 import org.tikv.common.util.ChannelFactory;
@@ -224,7 +223,7 @@ public class RegionManager {
       }
       return store;
     } catch (Exception e) {
-      throw new GrpcException(e);
+      return null;
     }
   }
 

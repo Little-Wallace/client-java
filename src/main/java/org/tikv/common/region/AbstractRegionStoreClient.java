@@ -190,10 +190,12 @@ public abstract class AbstractRegionStoreClient
           targetStore = store;
           candidateLeader = cur;
           originStore = null;
+          logger.warn(
+              String.format(
+                  "try store [%d],peer[%d] for region[%d], which may be new leader",
+                  targetStore.getId(), candidateLeader.getId(), region.getId()));
           updateClientStub();
           return true;
-        } else {
-          continue;
         }
       } else if (candidateLeader.getId() == cur.getId()) {
         hasVisitedStore = true;
@@ -264,7 +266,7 @@ public abstract class AbstractRegionStoreClient
   private TiStore switchProxyStore() {
     boolean hasVisitedStore = false;
     List<Metapb.Peer> peers = region.getFollowerList();
-    for (Metapb.Peer peer: peers) {
+    for (Metapb.Peer peer : peers) {
       if (targetStore.getProxyStore() == null) {
         TiStore store = regionManager.getStoreById(peer.getStoreId());
         if (store.isReachable() && store.getProxyStore() == null) {
