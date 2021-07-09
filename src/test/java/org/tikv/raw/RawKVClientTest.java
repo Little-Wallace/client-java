@@ -309,11 +309,11 @@ public class RawKVClientTest {
   @Test
   public void PutGetTest() {
     if (!initialized) return;
-    int workerCnt = 40;
+    int workerCnt = 1000;
     ExecutorService executors = Executors.newFixedThreadPool(workerCnt);
     ExecutorCompletionService<Object> completionService =
         new ExecutorCompletionService<>(executors);
-    int dataCnt = (int) Long.parseLong(System.getProperty("tikv.test.operation_cnt", "1000000"));
+    int dataCnt = (int) Long.parseLong(System.getProperty("tikv.test.operation_cnt", "5000000"));
 
     List<ByteString> valuePool = new ArrayList<>();
     int valuePoolSize = 10000;
@@ -330,7 +330,7 @@ public class RawKVClientTest {
     if (runMode.equals("run")) {
       logger.info("run test");
       for (int i = 0; i < workerCnt; i++) {
-        int idx = i;
+        int idx = i % 40;
         completionService.submit(
             () -> {
               long failCount = 0;
