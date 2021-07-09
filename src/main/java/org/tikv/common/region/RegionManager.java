@@ -235,7 +235,7 @@ public class RegionManager {
     cache.invalidateRegion(region);
   }
 
-  public synchronized TiRegion updateLeader(TiRegion region, long storeId) {
+  public TiRegion updateLeader(TiRegion region, long storeId) {
     TiRegion newRegion = region.switchPeer(storeId);
     if (cache.updateRegion(region, newRegion)) {
       return newRegion;
@@ -246,7 +246,7 @@ public class RegionManager {
     return null;
   }
 
-  public synchronized void updateStore(TiStore oldStore, TiStore newStore) {
+  public void updateStore(TiStore oldStore, TiStore newStore) {
     if (cache.updateStore(oldStore, newStore)) {
       storeChecker.scheduleStoreHealthCheck(newStore);
     }
@@ -262,7 +262,7 @@ public class RegionManager {
    *
    * @param region region
    */
-  public synchronized void onRequestFail(TiRegion region) {
+  public void onRequestFail(TiRegion region) {
     cache.invalidateRegion(region);
   }
 

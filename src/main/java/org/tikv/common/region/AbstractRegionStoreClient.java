@@ -128,7 +128,6 @@ public abstract class AbstractRegionStoreClient
       if (retryForwardTimes <= region.getFollowerList().size()) {
         return retryOtherStoreByProxyForward();
       }
-      return true;
     }
 
     if (retryOtherStoreLeader()) {
