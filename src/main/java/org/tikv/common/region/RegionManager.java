@@ -236,6 +236,9 @@ public class RegionManager {
   }
 
   public TiRegion updateLeader(TiRegion region, long storeId) {
+    if (region.getLeader().getStoreId() == storeId) {
+      return region;
+    }
     TiRegion newRegion = region.switchPeer(storeId);
     if (cache.updateRegion(region, newRegion)) {
       return newRegion;
